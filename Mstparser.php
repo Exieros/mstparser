@@ -1,10 +1,10 @@
 <?php
 namespace exieros\mstparser;
 
+require_once './vendor/autoload.php';
+
 use Exception;
 use Nelexa\Buffer\FileBuffer;
-
-require_once './vendor/autoload.php';
 
 class Mstparser 
 {
