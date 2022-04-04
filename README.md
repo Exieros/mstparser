@@ -22,12 +22,11 @@
  ``` ->setIterator (Функция)```
  Callback функция, которая будет на вход получать записи при условии если они прошли фильтрацию
  
- ``` ->addFilter (Массив [
+ ``` ->addFilter (Массив) ``` [
  	'guid, mfn, created_at, modified_at', 
 	'=(only guid), <, >' , 
 	'string for guid, int for mfn and timestamps'
-]) ```
- Callback функция, которая будет на вход получать записи при условии если они прошли фильтрацию
+])
  
  ``` ->start() ```
  Запуск работы парсера.
