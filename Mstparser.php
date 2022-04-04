@@ -12,13 +12,9 @@ class Mstparser
     private array $filters;
     private $iterator;
     
-
-
     public function __construct()
     {
-        $this->filters = [];
-
-        echo __CLASS__;            
+        $this->filters = [];        
     }
 
     public function setIterator(callable $iterator): self{
