@@ -2,32 +2,54 @@
 
 ## Пример использования:
 ```php
- require_once './Mstparser.php';
+require_once './Mstparser.php';
 
-	$parser = new \exieros\mstparser\Mstparser();
+$parser = new \exieros\mstparser\Mstparser();
 
-	$parser
-	->setPath("\\\Server_odb\irbis64\datai\OKIO\OKIO.MST")
-	->setIterator(function($e){
-		var_dump($e['guid']);
-	})
-	->addFilter(['modified_at', '>', 1648987200])
-	->addFilter(['guid', '=', '545AE69B-EB0B-4796-9470-DB223BBBC87F'])
-	->start();
+$parser
+->setDatabasesPath( '\\\Server_odb\irbis64\datai' )
+->addDatabase( 'OKIO' )
+->setDatesAsTimestamps( false )
+->addFilter( ['created_at', '>', 20220403] )
+->setIterator(function($e){
+    echo 'MFN: ', $e['mfn'], '<br>';
+    echo 'created_at: ', $e['created_at'], '<br>';
+    echo 'modified_at: ', $e['modified_at'], '<br>';
+})
+->start();
  ```
- ## Небольшая справка
- ### ->setPath (Строка)
- Путь до *.MST файла базы данных. В примере выше используется сетевая папка.
- 
- ### ->setIterator (Функция)
- Callback функция, которая будет на вход получать записи при условии если они прошли фильтрацию
- 
- ### ->addFilter (Массив ['guid, mfn, created_at, modified_at', '=(only guid), <, >' , 'string for guid, int for mfn and timestamps'])
- Callback функция, которая будет на вход получать записи при условии если они прошли фильтрацию
- 
- ### ->start()
- Запуск работы парсера.
- 
- ## На слабеньком компьютере через сетевую папку итерация 40.000 записей занимает порядка 6 секунд. По-хорошему нужно бы профилировать и оптимизировать узкие места. 
- 
- 
+## Небольшая справка
+### ->setDatabasesPath (Строка)
+Путь до директории с база данных. В примере выше используется сетевая папка. Однако крайне не рекомендую этого делать. Разница между локальным чтением и по сети на порядки. Разумеется зависит еще пропускной способности сети. Потому лучше запускать скрипт на той же машине, что и базы данных Ирбис64. По умолчанию это папка ...\irbis64\datai
+
+### ->addDatabase (Строка)
+Добавить базу данных в обработку.
+Если вы указали setDatabasesPath("C:\irbis64\datai") и addDatabase("OKIO"),
+то по пути C:\irbis64\datai\OKIO должны быть доступны два файла: OKIO.MST и OKIO.xrf
+
+### ->setDatesAsTimestamps (Bool)(По умолчанию true)
+Выводить даты as is YYYYMMDD или переводить их в таймштамп
+
+### ->setIterator (Функция)
+Callback функция, которая будет на вход получать записи при условии если они прошли фильтрацию
+
+### ->addFilter (Массив ['guid, mfn, created_at, modified_at', '=(only guid), <, >' , 'string for guid, int for mfn and timestamps'])
+Добавить фильтр. Фильтр Умножающий! Тоесть если одно из условий не выполняется, ничего не попадет в выдачу.
+Примеры:
+```php
+//Записи дата добавления в ирбис не ранее 2022.04.03
+->addFilter( ['created_at', '>', 20220403] )
+//Записи дата последней модификации не ранее 2022.04.03 (Однако сильно прямо полагаться на эти даты не стоит, они не гарантируют ничего ввиду особенностей работы ирбис)
+->addFilter( ['modified_at', '>', 20220403] )
+//Записи с mfn от 1 до 99
+->addFilter( ['mfn', '<', 100] )
+/*Запись c определенным guid
+!Фильтр вида ['guid', '=', '{E05F04F2-C8D2-44B7-B528-471D31375F8B}'] не вернет ничего. Именно в таком формате они почему-то хранятся в ирбис.....
+*/
+->addFilter( ['guid', '=', 'E05F04F2-C8D2-44B7-B528-471D31375F8B'] )
+ ```
+
+### ->start()
+Запуск работы парсера.
+
+На слабом компьютере с дохлым hhd база данных на 40000 записей читается 3-4 секунды.
