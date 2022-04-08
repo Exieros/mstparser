@@ -27,6 +27,9 @@ $parser
 Если вы указали setDatabasesPath("C:\irbis64\datai") и addDatabase("OKIO"),
 то по пути C:\irbis64\datai\OKIO должны быть доступны два файла: OKIO.MST и OKIO.xrf
 
+### skipEmptyValues (Bool)(По умолчанию true)
+Добавлять ли пустые строки в результатирующую выборку полей. По умолчанию пустые строки пропускаются.
+
 ### ->setDatesAsTimestamps (Bool)(По умолчанию true)
 Выводить даты as is YYYYMMDD или переводить их в таймштамп
 
@@ -48,6 +51,60 @@ Callback функция, которая будет на вход получат�
 */
 ->addFilter( ['guid', '=', 'E05F04F2-C8D2-44B7-B528-471D31375F8B'] )
  ```
+
+### ->dumpToSQL(String:pathToSql, Bool:addDropCreateLines, Bool:deleteFileIfExist, Int:chunkSize)
+Если вызвать этот метод, строки которые пройдут фильтрацию будут добавлены в дамп .sql
+pathToSql - Путь куда сохранять дамп
+addDropCreateLines - Добавить ли Drop и Create конструкции для таблиц
+```sql
+DROP TABLE IF EXISTS `records`;
+DROP TABLE IF EXISTS `fields`;
+
+CREATE TABLE `fields` (
+    `id` bigint NOT NULL AUTO_INCREMENT,
+    `num` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    `subkey` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    `record_id` int NOT NULL,
+    `value` text CHARSET utf8mb4,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `records` (
+    `id` int NOT NULL AUTO_INCREMENT,
+    `guid` text,
+    `created_at_irbis` int NOT NULL DEFAULT '0',
+    `modified_at_irbis` int NOT NULL DEFAULT '0',
+    `dbname` text,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+deleteFileIfExist - Удалить ли уже существующий .sql файл если он будет найден по указанному пути
+chunkSize - Максимальный размер пакета Insert. Как показывает пратика чем больше, тем быстрее происходит дамп и импорт. Однако устанавливать стоит в разумных пределах.
+
+Пример использования:
+```php
+require_once './Mstparser.php';
+
+$parser = new \exieros\mstparser\Mstparser();
+
+$parser
+->setDatabasesPath( '\\\Server_odb\irbis64\datai' )
+->addDatabase( 'OKIO' )
+->addDatabase( 'BIBL' )
+->setDatesAsTimestamps( false )
+->setIterator(function($e){
+
+})
+->dumpToSQL('C:\IST\www\test.sql', true, true , 10000)
+->start();
+```
+Разумеется импортировать большой дамп через веб-морду не самая лучшая идея потому через консоль это можно сделать следующими командами:
+```cmd
+cmd> ./mysql --user=user --password=password --default-character-set=utf8mb4
+mysql> use database_name
+mysql> source path_to_sql_dump
+```
+Функция экспериментальная.
 
 ### ->start()
 Запуск работы парсера.

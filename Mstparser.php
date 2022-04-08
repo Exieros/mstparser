@@ -2,6 +2,7 @@
 namespace exieros\mstparser;
 
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . './StreamToSQLDump.php';
 
 use Exception;
 use Nelexa\Buffer\FileBuffer;
@@ -12,14 +13,11 @@ class Mstparser
     private array $filters;
     private $iterator;
     
-
-
-    public function __construct()
-    {
+    public function __construct(){
         $this->filters = [];
         $this->databases = [];
         $this->skipEmptyValues = true;
-        $this->datesAsTimestamps = true;      
+        $this->datesAsTimestamps = true;
     }
 
     public function setSkipEmptyValue(bool $skip): self{
@@ -27,7 +25,12 @@ class Mstparser
         return $this;
     }
 
-    public function setDatesAsTimestamps(bool $ts): self{
+    public function dumpToSQL(string $pathToSql = __DIR__ . './dump.sql', bool $addDropCreateLines = true, bool $deleteFileIfExist = true, int $chunkSize = 200):self{
+        $this->writterSql = new \exieros\mstparser\StreamToSQLDump( $pathToSql, $addDropCreateLines, $deleteFileIfExist, $chunkSize );
+        return $this;
+    }
+
+    public function setDatesAsTimestamps(bool $ts = true): self{
         $this->datesAsTimestamps = $ts;
         return $this;
     }
@@ -159,7 +162,7 @@ class Mstparser
             $this->xrf_buffer = new FileBuffer( $db[1] );
             $this->xrf_buffer->setReadOnly(true);
 
-            while( $this->xrf_buffer->position() < $this->xrf_buffer->size() ){
+            while( $this->xrf_buffer->position() <= $this->xrf_buffer->size() - 12 ){
                 $xrf_rec = $this->readXrfRecord();
 
                 if( $xrf_rec['XRF_FLAGS'] != 0 || $xrf_rec['XRF_LOW'] == 0 ){
@@ -265,6 +268,7 @@ class Mstparser
                     }
                 }
 
+                //По умолчанию дата в формате YYYYMMDD переводится в таймштамп если удалось достать дату из записи. Если указано обратное, то оставляем as is.
                 if( $this->datesAsTimestamps && $created_at != 0 ){
                     $created_at_dateObject = date_create_from_format( 'Ymd', (string)$created_at );
                     $cteated_at_ts = $created_at_dateObject->getTimestamp();
@@ -292,7 +296,16 @@ class Mstparser
                 ];
 
                 call_user_func($this->iterator, $data);
+
+                if( isset( $this->writterSql ) ){
+                    $this->writterSql->addRecord($data);
+                }
+            //eow
             }
+        //eof
+        }
+        if( isset( $this->writterSql ) ){
+            $this->writterSql->dumpLeftovers();
         }
     }
 }
